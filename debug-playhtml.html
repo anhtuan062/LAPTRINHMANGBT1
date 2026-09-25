@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OTTv2 PlayHTML Diagnostic</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+    .log { margin: 5px 0; padding: 5px; border-bottom: 1px solid #333; }
+    .error { color: #e74c3c; }
+    .success { color: #2ecc71; }
+    .info { color: #3498db; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    #output { white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>OTTv2 PlayHTML Diagnostic</h1>
+  <button onclick="runTest()">Run PlayHTML Test</button>
+  <button onclick="clearOutput()">Clear</button>
+  <div id="output"></div>
+
+  <script type="module">
+    import { playhtml } from "https://unpkg.com/playhtml";
+
+    const output = document.getElementById('output');
+
+    function log(msg, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      output.appendChild(div);
+      console.log(`[OTTv2-Diag] ${msg}`);
+    }
+
+    window.runTest = async function() {
+      clearOutput();
+      log('Starting PlayHTML diagnostic...', 'info');
+
+      try {
+        const room = 'test-' + Math.random().toString(36).substring(2, 8);
+        log(`Using room: ${room}`, 'info');
+
+        log('Calling playhtml.init()...', 'info');
+        await playhtml.init({ room: room });
+        log('playhtml.init() succeeded', 'success');
+
+        log('Waiting for playhtml.ready...', 'info');
+        await playhtml.ready;
+        log('playhtml.ready resolved', 'success');
+
+        log('Creating page data channel...', 'info');
+        const data = playhtml.createPageData('ottv2-diag', { count: 0, msg: 'hello' });
+        log('Page data channel created', 'success');
+
+        const initial = data.getData();
+        log(`Initial data: ${JSON.stringify(initial)}`, 'info');
+
+        data.setData((draft) => {
+          draft.count = 1;
+          draft.msg = 'updated-' + Date.now();
+        });
+        log('Data set via mutator', 'info');
+
+        const updated = data.getData();
+        log(`Updated data: ${JSON.stringify(updated)}`, 'info');
+
+        data.onUpdate((newData) => {
+          log(`onUpdate received: ${JSON.stringify(newData)}`, 'success');
+        });
+
+        log('Waiting 5s to see if onUpdate fires from other clients...', 'info');
+        setTimeout(() => {
+          log('Diagnostic complete. Open this page in another browser with same room to test sync.', 'info');
+          log(`Share URL: ${window.location.origin}${window.location.pathname}?room=${room}`, 'info');
+        }, 5000);
+
+      } catch (err) {
+        log(`ERROR: ${err?.message || err}`, 'error');
+        console.error(err);
+      }
+    };
+
+    window.clearOutput = function() {
+      output.innerHTML = '';
+    };
+
+    // Auto-run on load
+    setTimeout(runTest, 500);
+  </script>
+</body>
+</html>

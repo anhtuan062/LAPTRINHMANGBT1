@@ -455,6 +455,17 @@ body {
   box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
 }
 
+.cell.capture-move::after {
+  content: '';
+  position: absolute;
+  width: 35%;
+  height: 35%;
+  background: rgba(231, 76, 60, 0.8);
+  border-radius: 50%;
+  z-index: 1;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.6);
+}
+
 .piece {
   font-size: clamp(1.2rem, 3vw, 2rem);
   z-index: 1;
@@ -700,7 +711,7 @@ body {
   animation: fadeIn 0.2s ease-out backwards;
 }
 
-/* ==================== UTILITY ==================== */
+/* ==================== UTILITY =================== */
 .hidden {
   display: none !important;
 }
