@@ -105,14 +105,17 @@ function getLegalMovesForPiece(state, pieceId) {
 
 function validateMove(state, pieceId, toRow, toCol) {
   const piece = state.pieces[pieceId];
+  debugLog('validateMove piece=' + pieceId + ' to=' + toRow + ',' + toCol + ' piecePlayer=' + (piece ? piece.player : 'null') + ' current=' + state.currentPlayer);
   if (!piece) return {valid: false, reason: "Quân không tồn tại"};
   if (state.gameStatus !== "playing") return {valid: false, reason: "Game chưa bắt đầu"};
 
   const myPlayer = state.players.find(p => p.id === myPlayerId);
   if (!myPlayer || myPlayer.playerNumber !== state.currentPlayer) {
+    debugLog('validateMove rejected: not your turn my=' + (myPlayer ? myPlayer.playerNumber : 'null') + ' current=' + state.currentPlayer);
     return {valid: false, reason: "Không phải lượt của bạn"};
   }
   if (piece.player !== myPlayer.playerNumber) {
+    debugLog('validateMove rejected: not your piece');
     return {valid: false, reason: "Đây không phải quân của bạn"};
   }
 
@@ -142,25 +145,31 @@ function validateMove(state, pieceId, toRow, toCol) {
 }
 
 function executeMove(draft, pieceId, toRow, toCol) {
+  debugLog('executeMove start: ' + pieceId + ' to ' + toRow + ',' + toCol);
   const piece = draft.pieces[pieceId];
   const fromRow = piece.row;
   const fromCol = piece.col;
 
-  draft.board[fromRow][fromCol] = null;
+  const newBoard = draft.board.map(r => [...r]);
+  newBoard[fromRow][fromCol] = null;
 
-  const targetId = draft.board[toRow][toCol];
+  const targetId = newBoard[toRow][toCol];
   let captured = null;
+  const newPieces = { ...draft.pieces };
   if (targetId) {
-    captured = draft.pieces[targetId];
-    delete draft.pieces[targetId];
+    captured = newPieces[targetId];
+    delete newPieces[targetId];
   }
 
-  piece.row = toRow;
-  piece.col = toCol;
-  draft.board[toRow][toCol] = pieceId;
+  const newPiece = { ...piece, row: toRow, col: toCol };
+  newPieces[pieceId] = newPiece;
+  newBoard[toRow][toCol] = pieceId;
+
+  draft.board = newBoard;
+  draft.pieces = newPieces;
 
   const opponent = piece.player === 1 ? 2 : 1;
-  const opponentPieces = Object.values(draft.pieces).filter(p => p.player === opponent);
+  const opponentPieces = Object.values(newPieces).filter(p => p.player === opponent);
   const typesPresent = new Set(opponentPieces.map(p => p.type));
   const missingType = ['dam', 'la', 'keo'].find(t => !typesPresent.has(t));
 
@@ -185,6 +194,7 @@ function executeMove(draft, pieceId, toRow, toCol) {
     draft.turnNumber++;
   }
 
+  debugLog('executeMove done, status=' + draft.gameStatus + ' current=' + draft.currentPlayer);
   return {success: true, captured};
 }
 
@@ -409,17 +419,20 @@ function onCellClick(row, col) {
 }
 
 function makeMove(pieceId, toRow, toCol) {
+  debugLog('makeMove start: ' + pieceId + ' to ' + toRow + ',' + toCol);
   const state = gameData.getData();
   const validation = validateMove(state, pieceId, toRow, toCol);
+  debugLog('makeMove validation: ' + JSON.stringify(validation));
   if (!validation.valid) {
     showError(validation.reason);
     return;
   }
 
-  debugLog('makeMove: ' + pieceId + ' to ' + toRow + ',' + toCol);
+  debugLog('makeMove executing...');
   gameData.setData((draft) => {
     executeMove(draft, pieceId, toRow, toCol);
   });
+  debugLog('makeMove setData called');
 }
 
     function joinGame() {
